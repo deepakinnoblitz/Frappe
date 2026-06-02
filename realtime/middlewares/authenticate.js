@@ -54,7 +54,8 @@ function authenticate_with_frappe(socket, next) {
 		process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"; // bypass SSL hostname mismatch
 
 		const site_name = socket.site_name || "erp.innoblitz.in";
-		const frappe_backend = `https://${site_name}${path}`;
+		const port = conf.webserver_port || 8000;
+		const frappe_backend = `http://127.0.0.1:${port}${path}`;
 
 		const headers = {
 			...(opts.headers || {}),

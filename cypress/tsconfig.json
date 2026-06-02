@@ -4,9 +4,14 @@
         "baseUrl": "../node_modules",
         "types": [
             "cypress"
-        ]
+        ],
+        "noEmit": true,
+        "isolatedModules": true,
+        "skipLibCheck": true,
+        "esModuleInterop": true
     },
     "include": [
-        "**/*.*"
+        "**/*.ts",
+        "**/*.js"
     ]
 }

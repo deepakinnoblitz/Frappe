@@ -61,16 +61,18 @@ class Event(Document):
 		color: DF.Color | None
 		description: DF.TextEditor | None
 		ends_on: DF.Datetime | None
-		event_category: DF.Literal["Event", "Meeting", "Call", "Sent/Received Email", "Other"]
+		event_category: DF.Literal["Event", "Meeting", "Call", "Sent/Received Email", "Todo", "Other"]
 		event_participants: DF.Table[EventParticipants]
 		event_type: DF.Literal["Private", "Public"]
 		friday: DF.Check
 		google_calendar: DF.Link | None
 		google_calendar_event_id: DF.Data | None
 		google_calendar_id: DF.Data | None
-		google_meet_link: DF.Data | None
+		google_meet_link: DF.SmallText | None
 		links: DF.Table[DynamicLink]
 		monday: DF.Check
+		owner_name: DF.Link | None
+		priority: DF.Data | None
 		pulled_from_google_calendar: DF.Check
 		reference_docname: DF.DynamicLink | None
 		reference_doctype: DF.Link | None
@@ -81,7 +83,7 @@ class Event(Document):
 		send_reminder: DF.Check
 		sender: DF.Data | None
 		starts_on: DF.Datetime
-		status: DF.Literal["Open", "Completed", "Closed", "Cancelled"]
+		status: DF.Literal["Open", "Scheduled", "Completed", "Closed", "Cancelled"]
 		subject: DF.SmallText
 		sunday: DF.Check
 		sync_with_google_calendar: DF.Check
@@ -268,15 +270,15 @@ def send_event_digest():
 				if e.all_day:
 					e.starts_on = "All Day"
 
-			frappe.sendmail(
-				recipients=user.email,
-				subject=frappe._("Upcoming Events for Today"),
-				template="upcoming_events",
-				args={
-					"events": events,
-				},
-				header=[frappe._("Events in Today's Calendar"), "blue"],
-			)
+			# frappe.sendmail(
+			# 	recipients=user.email,
+			# 	subject=frappe._("Upcoming Events for Today"),
+			# 	template="upcoming_events",
+			# 	args={
+			# 		"events": events,
+			# 	},
+			# 	header=[frappe._("Events in Today's Calendar"), "blue"],
+			# )
 
 
 @frappe.whitelist()

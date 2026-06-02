@@ -356,15 +356,14 @@ frappe.ui.Sidebar = class Sidebar {
 				<div class="standard-sidebar-item ${item.selected ? "selected" : ""}">
 					<a
 						href="${path}"
-						target="${item.type === "URL" ? "_blank" : ""}"
+						target=""
 						class="item-anchor ${item.is_editable ? "" : "block-click"}" title="${__(item.title)}"
 					>
 						<span class="sidebar-item-icon" item-icon=${item.icon || "folder-normal"}>
-							${
-								item.public || item.icon
-									? frappe.utils.icon(item.icon || "folder-normal", "md")
-									: `<span class="indicator ${item.indicator_color}"></span>`
-							}
+							${item.public || item.icon
+				? frappe.utils.icon(item.icon || "folder-normal", "md")
+				: `<span class="indicator ${item.indicator_color}"></span>`
+			}
 						</span>
 						<span class="sidebar-item-label">${__(item.title)}<span>
 					</a>

@@ -3,6 +3,7 @@
  "allow_import": 1,
  "autoname": "EV.#####",
  "creation": "2013-06-10 13:17:47",
+ "default_view": "Calendar",
  "doctype": "DocType",
  "document_type": "Document",
  "email_append_to": 1,
@@ -15,6 +16,7 @@
   "color",
   "send_reminder",
   "repeat_this_event",
+  "priority",
   "column_break_4",
   "starts_on",
   "ends_on",
@@ -50,7 +52,9 @@
   "column_break_pjkw",
   "reference_docname",
   "section_break_qemp",
-  "links"
+  "links",
+  "section_break_kxek",
+  "owner_name"
  ],
  "fields": [
   {
@@ -71,7 +75,7 @@
    "fieldname": "event_category",
    "fieldtype": "Select",
    "label": "Event Category",
-   "options": "Event\nMeeting\nCall\nSent/Received Email\nOther"
+   "options": "Event\nMeeting\nCall\nSent/Received Email\nTodo\nOther"
   },
   {
    "fieldname": "event_type",
@@ -89,12 +93,14 @@
    "default": "1",
    "fieldname": "send_reminder",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Send an email reminder in the morning"
   },
   {
    "default": "0",
    "fieldname": "repeat_this_event",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Repeat this Event"
   },
   {
@@ -116,12 +122,14 @@
    "default": "0",
    "fieldname": "all_day",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "All Day"
   },
   {
    "depends_on": "repeat_this_event",
    "fieldname": "section_break_13",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "hidden": 1
   },
   {
    "depends_on": "repeat_this_event",
@@ -198,6 +206,7 @@
   {
    "fieldname": "color",
    "fieldtype": "Color",
+   "hidden": 1,
    "label": "Color"
   },
   {
@@ -213,6 +222,7 @@
   {
    "fieldname": "participants",
    "fieldtype": "Section Break",
+   "hidden": 1,
    "label": "Participants",
    "oldfieldtype": "Section Break"
   },
@@ -229,13 +239,14 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Status",
-   "options": "Open\nCompleted\nClosed\nCancelled"
+   "options": "Open\nScheduled\nCompleted\nClosed\nCancelled"
   },
   {
    "collapsible": 1,
    "depends_on": "eval:doc.sync_with_google_calendar || doc.pulled_from_google_calendar",
    "fieldname": "sb_00",
    "fieldtype": "Section Break",
+   "hidden": 1,
    "label": "Google Calendar"
   },
   {
@@ -261,6 +272,7 @@
    "default": "0",
    "fieldname": "sync_with_google_calendar",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Sync with Google Calendar"
   },
   {
@@ -300,7 +312,8 @@
   },
   {
    "fieldname": "section_break_jlqd",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "hidden": 1
   },
   {
    "fieldname": "links",
@@ -326,14 +339,37 @@
   },
   {
    "fieldname": "section_break_qemp",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "hidden": 1
+  },
+  {
+   "fieldname": "priority",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Priority",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_kxek",
+   "fieldtype": "Section Break",
+   "hidden": 1
+  },
+  {
+   "default": "__user",
+   "fieldname": "owner_name",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Owner",
+   "options": "User",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "icon": "fa fa-calendar",
  "idx": 1,
+ "is_calendar_and_gantt": 1,
  "links": [],
- "modified": "2025-08-12 13:37:36.319985",
+ "modified": "2026-01-09 13:06:57.721829",
  "modified_by": "Administrator",
  "module": "Desk",
  "name": "Event",

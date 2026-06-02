@@ -5,17 +5,70 @@ import json
 
 import frappe
 from frappe import _
+from datetime import datetime, time, timedelta
+from frappe.utils import get_datetime, add_days, cint
 
 
 @frappe.whitelist()
 def update_event(args, field_map):
-	"""Updates Event (called via calendar) based on passed `field_map`"""
-	args = frappe._dict(json.loads(args))
-	field_map = frappe._dict(json.loads(field_map))
-	w = frappe.get_doc(args.doctype, args.name)
-	w.set(field_map.start, args[field_map.start])
-	w.set(field_map.end, args.get(field_map.end))
-	w.save()
+
+    frappe.flags.from_calendar_drag = True
+
+    try:
+        args = frappe._dict(json.loads(args))
+        field_map = frappe._dict(json.loads(field_map))
+
+        doc = frappe.get_doc(args.doctype, args.name)
+
+        old_start = get_datetime(doc.get(field_map.start))
+        old_end   = get_datetime(doc.get(field_map.end)) if doc.get(field_map.end) else None
+
+        new_start = get_datetime(args.get(field_map.start))
+        new_end   = get_datetime(args.get(field_map.end)) if args.get(field_map.end) else None
+
+        if not old_start or not new_start:
+            return
+
+        # -----------------------------
+        # Preserve time, change date
+        # -----------------------------
+        start_dt = datetime.combine(
+            new_start.date(),
+            old_start.time()
+        )
+        doc.set(field_map.start, start_dt)
+
+        # -----------------------------
+        # END DATE HANDLING (IMPORTANT)
+        # -----------------------------
+        if old_end:
+
+            is_all_day = cint(args.get("allDay")) == 1
+
+            # 🔥 Case 1: Single-day drag (end missing or invalid)
+            if not new_end or new_end <= new_start:
+                end_dt = start_dt + timedelta(minutes=1)
+
+            # 🔥 Case 2: All-day or FullCalendar exclusive end
+            elif is_all_day or new_end.time() == time(0, 0):
+                end_dt = datetime.combine(
+                    add_days(new_end.date(), -1),
+                    old_end.time()
+                )
+
+            # 🔥 Case 3: Normal timed event
+            else:
+                end_dt = datetime.combine(
+                    new_end.date(),
+                    old_end.time()
+                )
+
+            doc.set(field_map.end, end_dt)
+
+        doc.save(ignore_permissions=True)
+
+    finally: 
+        frappe.flags.from_calendar_drag = False
 
 
 def get_event_conditions(doctype, filters=None):
@@ -41,7 +94,7 @@ def get_events(doctype, start, end, field_map, filters=None, fields=None):
 	filters = json.loads(filters) if filters else []
 
 	if not fields:
-		fields = [field_map.start, field_map.end, field_map.title, "name"]
+		fields = [field_map.start, field_map.end, field_map.title, "name", "priority", "status"]
 
 	if field_map.color:
 		fields.append(field_map.color)

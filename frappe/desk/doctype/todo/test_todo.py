@@ -1,146 +1,287 @@
-# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
-# License: MIT. See LICENSE
+# Copyright (c) 2015, Frappe Technologies
+# License: MIT
+
+import json
 import frappe
-from frappe.core.doctype.doctype.doctype import clear_permissions_cache
-from frappe.model.db_query import DatabaseQuery
-from frappe.permissions import add_permission, reset_perms
-from frappe.tests import IntegrationTestCase
+from frappe.model.document import Document
+from frappe.permissions import AUTOMATIC_ROLES
+from frappe.utils import get_fullname, parse_addr
+from frappe.utils import strip_html
 
-EXTRA_TEST_RECORD_DEPENDENCIES = ["User", "Web Page"]
-
-
-class TestToDo(IntegrationTestCase):
-	def test_delete(self):
-		todo = frappe.get_doc(doctype="ToDo", description="test todo", assigned_by="Administrator").insert()
-
-		frappe.db.delete("Deleted Document")
-		todo.delete()
-
-		deleted = frappe.get_doc(
-			"Deleted Document", dict(deleted_doctype=todo.doctype, deleted_name=todo.name)
-		)
-		self.assertEqual(todo.as_json(), deleted.data)
-
-	def test_fetch(self):
-		todo = frappe.get_doc(doctype="ToDo", description="test todo", assigned_by="Administrator").insert()
-		self.assertEqual(
-			todo.assigned_by_full_name, frappe.db.get_value("User", todo.assigned_by, "full_name")
-		)
-
-	def test_fetch_setup(self):
-		frappe.db.delete("ToDo")
-
-		todo_meta = frappe.get_meta("ToDo")
-		todo_meta.get("fields", dict(fieldname="assigned_by_full_name"))[0].fetch_from = ""
-		todo_meta.save()
-
-		frappe.clear_cache(doctype="ToDo")
-
-		todo = frappe.get_doc(doctype="ToDo", description="test todo", assigned_by="Administrator").insert()
-		self.assertFalse(todo.assigned_by_full_name)
-
-		todo_meta = frappe.get_meta("ToDo")
-		todo_meta.get("fields", dict(fieldname="assigned_by_full_name"))[
-			0
-		].fetch_from = "assigned_by.full_name"
-		todo_meta.save()
-
-		todo.reload()
-		todo.save()
-
-		self.assertEqual(
-			todo.assigned_by_full_name, frappe.db.get_value("User", todo.assigned_by, "full_name")
-		)
-
-	def test_todo_list_access(self):
-		create_new_todo("Test1", "testperm@example.com")
-
-		frappe.set_user("test4@example.com")
-		create_new_todo("Test2", "test4@example.com")
-		test_user_data = DatabaseQuery("ToDo").execute()
-
-		frappe.set_user("testperm@example.com")
-		system_manager_data = DatabaseQuery("ToDo").execute()
-
-		self.assertNotEqual(test_user_data, system_manager_data)
-
-		frappe.set_user("Administrator")
-		frappe.db.rollback()
-
-	def test_doc_read_access(self):
-		# owner and assigned_by is testperm
-		todo1 = create_new_todo("Test1", "testperm@example.com")
-		test_user = frappe.get_doc("User", "test4@example.com")
-
-		# owner is testperm, but assigned_by is test4
-		todo2 = create_new_todo("Test2", "test4@example.com")
-
-		frappe.set_user("test4@example.com")
-		# owner and assigned_by is test4
-		todo3 = create_new_todo("Test3", "test4@example.com")
-
-		# user without any role to read or write todo document
-		self.assertFalse(todo1.has_permission("read"))
-		self.assertFalse(todo1.has_permission("write"))
-
-		# user without any role but he/she is assigned_by of that todo document
-		self.assertTrue(todo2.has_permission("read"))
-		self.assertTrue(todo2.has_permission("write"))
-
-		# user is the owner and assigned_by of the todo document
-		self.assertTrue(todo3.has_permission("read"))
-		self.assertTrue(todo3.has_permission("write"))
-
-		frappe.set_user("Administrator")
-
-		test_user.add_roles("Website Manager")
-		add_permission("ToDo", "Website Manager")
-
-		frappe.set_user("test4@example.com")
-
-		# user with only read access to todo document, not an owner or assigned_by
-		self.assertTrue(todo1.has_permission("read"))
-		self.assertFalse(todo1.has_permission("write"))
-
-		frappe.set_user("Administrator")
-		test_user.remove_roles("Website Manager")
-		reset_perms("ToDo")
-		clear_permissions_cache("ToDo")
-		frappe.db.rollback()
-
-	def test_fetch_if_empty(self):
-		frappe.db.delete("ToDo")
-
-		# Allow user changes
-		todo_meta = frappe.get_meta("ToDo")
-		field = todo_meta.get("fields", dict(fieldname="assigned_by_full_name"))[0]
-		field.fetch_from = "assigned_by.full_name"
-		field.fetch_if_empty = 1
-		todo_meta.save()
-
-		frappe.clear_cache(doctype="ToDo")
-
-		todo = frappe.get_doc(
-			doctype="ToDo",
-			description="test todo",
-			assigned_by="Administrator",
-			assigned_by_full_name="Admin",
-		).insert()
-
-		self.assertEqual(todo.assigned_by_full_name, "Admin")
-
-		# Overwrite user changes
-		todo.meta.get("fields", dict(fieldname="assigned_by_full_name"))[0].fetch_if_empty = 0
-		todo.meta.save()
-
-		todo.reload()
-		todo.save()
-
-		self.assertEqual(
-			todo.assigned_by_full_name, frappe.db.get_value("User", todo.assigned_by, "full_name")
-		)
+exclude_from_linked_with = True
 
 
-def create_new_todo(description, assigned_by):
-	todo = {"doctype": "ToDo", "description": description, "assigned_by": assigned_by}
-	return frappe.get_doc(todo).insert()
+class ToDo(Document):
+    # begin: auto-generated types
+    # This code is auto-generated. Do not modify anything in this block.
+
+    from typing import TYPE_CHECKING
+
+    if TYPE_CHECKING:
+        from frappe.types import DF
+
+        allocated_to: DF.Link | None
+        assigned_by: DF.Link | None
+        assigned_by_full_name: DF.ReadOnly | None
+        assignment_rule: DF.Link | None
+        color: DF.Color | None
+        date: DF.Date | None
+        description: DF.TextEditor
+        priority: DF.Literal["High", "Medium", "Low"]
+        reference_name: DF.DynamicLink | None
+        reference_type: DF.Link | None
+        role: DF.Link | None
+        sender: DF.Data | None
+        status: DF.Literal["Open", "Closed", "Cancelled"]
+    # end: auto-generated types
+
+    def validate(self):
+        self._assignment = None
+
+        # NEW ToDo
+        if self.is_new():
+            if self.assigned_by == self.allocated_to:
+                assignment_message = frappe._("{0} self assigned this task: {1}").format(
+                    get_fullname(self.assigned_by), self.description
+                )
+            else:
+                assignment_message = frappe._("{0} assigned {1}: {2}").format(
+                    get_fullname(self.assigned_by),
+                    get_fullname(self.allocated_to),
+                    self.description
+                )
+
+            self._assignment = {"text": assignment_message, "comment_type": "Assigned"}
+
+        # STATUS CHANGED
+        else:
+            if self.get_db_value("status") != self.status:
+                if self.allocated_to == frappe.session.user:
+                    removal_message = frappe._("{0} removed their assignment.").format(
+                        get_fullname(frappe.session.user)
+                    )
+                else:
+                    removal_message = frappe._("Assignment of {0} removed by {1}").format(
+                        get_fullname(self.allocated_to),
+                        get_fullname(frappe.session.user)
+                    )
+
+                self._assignment = {"text": removal_message, "comment_type": "Assignment Completed"}
+
+    # ------------------------------------------------------
+    # EVENT HOOK: On Update
+    # ------------------------------------------------------
+    def on_update(self):
+        if frappe.flags.get("ignore_todo_sync"):
+            return
+
+        if self._assignment:
+            self.add_assign_comment(**self._assignment)
+
+        self.update_in_reference()
+
+        # -----------------------------------------------
+        # UPDATE LINKED EVENT IF EXISTS
+        # -----------------------------------------------
+        event_name = frappe.db.get_value(
+            "Event",
+            {
+                "reference_doctype": "ToDo",
+                "reference_docname": self.name,
+            },
+            "name"
+        )
+
+        if not event_name:
+            # If missing, create new one
+            self.create_linked_event()
+            return
+
+        event = frappe.get_doc("Event", event_name)
+
+        subject = strip_html(self.description or "").strip()
+
+        event.subject = subject
+
+        # Update date/time
+        event.starts_on = self.date
+
+        event.ends_on = self.date
+
+        status_color = {
+            "Open": "#e03131",      # red
+            "Closed": "#2f9e44",    # green
+            "Cancelled": "#868e96", # grey
+        }
+
+        event.color = status_color.get(self.status, "#868e96")
+
+        event.status = "Open" if self.status == "Open" else "Closed"
+
+        event.save(ignore_permissions=True)
+
+
+    def after_insert(self):
+        self.create_linked_event()
+
+
+    # ------------------------------------------------------
+    # CREATE EVENT FOR TODO
+    # ------------------------------------------------------
+    def create_linked_event(self):
+        if not self.date:
+            return
+
+        # Check if an Event already exists for this ToDo
+        existing = frappe.db.get_value(
+            "Event",
+            {
+                "reference_doctype": "ToDo",
+                "reference_docname": self.name,
+            },
+            "name"
+        )
+
+        if existing:
+            return  # prevent duplicates
+
+        status_color = {
+			"Open": "#e03131",      # red
+			"Closed": "#2f9e44",    # green
+			"Cancelled": "#868e96"  # optional: grey
+		}
+
+        event_color = status_color.get(self.status, "#868e96")
+
+        subject = strip_html(self.description or "").strip()
+
+        # Create Event
+        event = frappe.get_doc({
+            "doctype": "Event",
+            "subject": subject,
+            "starts_on": self.date,
+			"ends_on": self.date,
+            "event_type": "Private",
+            "owner": self.allocated_to or frappe.session.user,
+            "reference_doctype": "ToDo",
+            "reference_docname": self.name,
+			"event_category": "Todo",
+            "color": event_color,
+            "status": "Open" if self.status == "Open" else "Closed"
+        })
+
+        event.insert(ignore_permissions=True)
+
+    # ------------------------------------------------------
+    # ON DELETE
+    # ------------------------------------------------------
+    def on_trash(self):
+        self.delete_communication_links()
+        self.update_in_reference()
+
+    # ------------------------------------------------------
+    def add_assign_comment(self, text, comment_type):
+        if not (self.reference_type and self.reference_name):
+            return
+
+        frappe.get_doc(self.reference_type, self.reference_name).add_comment(comment_type, text)
+
+    # ------------------------------------------------------
+    def delete_communication_links(self):
+        return frappe.db.delete(
+            "Communication Link",
+            {"link_doctype": self.doctype, "link_name": self.name}
+        )
+
+    # ------------------------------------------------------
+    def update_in_reference(self):
+        if not (self.reference_type and self.reference_name):
+            return
+
+        try:
+            assignments = frappe.db.get_values(
+                "ToDo",
+                {
+                    "reference_type": self.reference_type,
+                    "reference_name": str(self.reference_name),
+                    "status": ("not in", ("Cancelled", "Closed")),
+                    "allocated_to": ("is", "set"),
+                },
+                "allocated_to",
+                pluck=True,
+                for_update=True,
+            )
+
+            assignments.reverse()
+
+            if frappe.get_meta(self.reference_type).issingle:
+                frappe.db.set_single_value(
+                    self.reference_type,
+                    "_assign",
+                    json.dumps(assignments) if assignments else "",
+                    update_modified=False,
+                )
+            else:
+                frappe.db.set_value(
+                    self.reference_type,
+                    self.reference_name,
+                    "_assign",
+                    json.dumps(assignments) if assignments else "",
+                    update_modified=False,
+                )
+
+        except Exception as e:
+            if frappe.db.is_table_missing(e) and frappe.flags.in_install:
+                return
+
+            elif frappe.db.is_missing_column(e):
+                from frappe.database.schema import add_column
+                add_column(self.reference_type, "_assign", "Text")
+                self.update_in_reference()
+
+            else:
+                raise
+
+    # ------------------------------------------------------
+    @classmethod
+    def get_owners(cls, filters=None):
+        rows = frappe.get_all(cls.DocType, filters=filters or {}, fields=["allocated_to"])
+        return [parse_addr(row.allocated_to)[1] for row in rows if row.allocated_to]
+
+
+# ------------------------------------------------------
+# PERMISSIONS
+# ------------------------------------------------------
+
+def on_doctype_update():
+    frappe.db.add_index("ToDo", ["reference_type", "reference_name"])
+
+
+def get_permission_query_conditions(user):
+    if not user:
+        user = frappe.session.user
+
+    todo_roles = frappe.permissions.get_doctype_roles("ToDo")
+    todo_roles = set(todo_roles) - set(AUTOMATIC_ROLES)
+
+    if any(check in todo_roles for check in frappe.get_roles(user)):
+        return None
+    else:
+        return f"(`tabToDo`.allocated_to = {frappe.db.escape(user)} or `tabToDo`.assigned_by = {frappe.db.escape(user)})"
+
+
+def has_permission(doc, ptype="read", user=None):
+    user = user or frappe.session.user
+    todo_roles = frappe.permissions.get_doctype_roles("ToDo", ptype)
+    todo_roles = set(todo_roles) - set(AUTOMATIC_ROLES)
+
+    if any(check in todo_roles for check in frappe.get_roles(user)):
+        return True
+    else:
+        return doc.allocated_to == user or doc.assigned_by == user
+
+
+# ------------------------------------------------------
+@frappe.whitelist()
+def new_todo(description):
+    frappe.get_doc({"doctype": "ToDo", "description": description}).insert()

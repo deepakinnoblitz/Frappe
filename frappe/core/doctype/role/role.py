@@ -20,6 +20,7 @@ class Role(Document):
 
 		desk_access: DF.Check
 		disabled: DF.Check
+		display_in_frontend: DF.Check
 		home_page: DF.Data | None
 		is_custom: DF.Check
 		restrict_to_domain: DF.Link | None

@@ -98,24 +98,21 @@ def clear_realtime_log():
 
 
 def emit_via_redis(event, message, room):
-    """Publish real-time updates via redis (patched for correct socketio Redis)"""
+	"""Publish real-time updates via redis
 
-    import json, redis
+	:param event: Event name, like `task_progress` etc.
+	:param message: JSON message object. For async must contain `task_id`
+	:param room: name of the room"""
+	from frappe.utils.background_jobs import get_redis_connection_without_auth
 
-    try:
-        redis_url = frappe.local.conf.get("redis_socketio", "redis://127.0.0.1:12003")
-        r = redis.Redis.from_url(redis_url)
-        payload = frappe.as_json({
-            "event": event,
-            "message": message,
-            "room": room,
-            "namespace": frappe.local.site
-        })
-        r.publish("frappe.realtime.message", payload)
-        frappe.logger().info(f"[Realtime] Published via {redis_url} -> {room} : {event}")
-    except Exception as e:
-        frappe.log_error(f"Realtime emit failed: {e}", "realtime.emit_via_redis")
-
+	with suppress(redis.exceptions.ConnectionError):
+		r = get_redis_connection_without_auth()
+		r.publish(
+			"events",
+			frappe.as_json(
+				{"event": event, "message": message, "room": room, "namespace": frappe.local.site}
+			),
+		)
 
 
 @frappe.whitelist(allow_guest=True)

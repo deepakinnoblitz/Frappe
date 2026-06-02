@@ -14,7 +14,8 @@
   "disabled",
   "is_custom",
   "desk_access",
-  "two_factor_auth"
+  "two_factor_auth",
+  "display_in_frontend"
  ],
  "fields": [
   {
@@ -68,13 +69,19 @@
    "fieldtype": "Check",
    "in_list_view": 1,
    "label": "Is Custom"
+  },
+  {
+   "default": "0",
+   "fieldname": "display_in_frontend",
+   "fieldtype": "Check",
+   "label": "Display in Frontend"
   }
  ],
  "icon": "fa fa-bookmark",
  "idx": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-09-19 17:07:08.672124",
+ "modified": "2026-05-06 14:21:32.112746",
  "modified_by": "Administrator",
  "module": "Core",
  "name": "Role",
@@ -94,6 +101,7 @@
   }
  ],
  "quick_entry": 1,
+ "row_format": "Dynamic",
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
